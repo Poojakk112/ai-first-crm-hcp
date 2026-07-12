@@ -1,0 +1,20 @@
+.app {
+  min-height: 100vh;
+  padding: 32px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.app__content {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+@media (max-width: 860px) {
+  .app__content {
+    flex-direction: column;
+  }
+}

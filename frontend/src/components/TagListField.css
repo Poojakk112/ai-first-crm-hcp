@@ -1,0 +1,88 @@
+.tag-list-field {
+  margin-bottom: 18px;
+}
+
+.tag-list-field__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.tag-list-field__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-label);
+}
+
+.tag-list-field__add-btn {
+  border: 1px solid var(--color-border);
+  background: #fff;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.tag-list-field__add-btn:hover {
+  background: #f9fafb;
+}
+
+.tag-list-field__input-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tag-list-field__input-row input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.tag-list-field__input-row button {
+  padding: 7px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 500;
+}
+
+.tag-list-field__empty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.tag-list-field__chips {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-list-field__chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-chip-bg);
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.tag-list-field__chip button {
+  border: none;
+  background: transparent;
+  color: #3730a3;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
