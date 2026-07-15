@@ -1,4 +1,5 @@
 import os
+import json
 from typing import TypedDict, List, Dict
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
@@ -17,6 +18,8 @@ class State(TypedDict):
     input: str
     output: str
     history: List[Dict]
+    record: Dict
+    edit_request: str
 
 # ---------------- TOOL 1 ----------------
 def log_interaction(state: State):
@@ -29,10 +32,24 @@ def log_interaction(state: State):
 
 # ---------------- TOOL 2 ----------------
 def edit_interaction(state: State):
-    res = llm.invoke(f"Improve this interaction:\n{state['input']}")
-    state["output"] = res.content
-    return state
+    record = state.get("record", {})
+    edit_request = state.get("edit_request", "")
 
+    res = llm.invoke(
+        "Here is an existing HCP interaction record as JSON:\n"
+        f"{json.dumps(record)}\n\n"
+        "Apply this requested change to it:\n"
+        f"{edit_request}\n\n"
+        "Return ONLY the fields that changed, as strict JSON, using the exact "
+        "same key names as the original record. No markdown, no extra text, "
+        "no explanation. Example: {\"sentiment\": \"Negative\"}"
+    )
+    try:
+        changed_fields = json.loads(res.content)
+    except json.JSONDecodeError:
+        changed_fields = {}
+    state["output"] = json.dumps(changed_fields)
+    return state
 # ---------------- TOOL 3 ----------------
 def extract_entities(state: State):
     res = llm.invoke(f"Extract doctor, disease, medicine:\n{state['input']}")
@@ -62,8 +79,7 @@ builder.add_node("suggest", suggest)
 
 builder.set_entry_point("log")
 
-builder.add_edge("log", "edit")
-builder.add_edge("edit", "extract")
+builder.add_edge("log", "extract")
 builder.add_edge("extract", "summary")
 builder.add_edge("summary", "suggest")
 builder.add_edge("suggest", END)
@@ -71,14 +87,15 @@ builder.add_edge("suggest", END)
 graph = builder.compile()
 
 # ---------------- MAIN FUNCTION ----------------
-def run_agent(input_text: str, action: str):
+def run_agent(input_text: str, action: str, record: dict = None, edit_request: str = ""):
 
     state = {
         "input": input_text,
         "output": "",
-        "history": []
+        "history": [],
+        "record": record or {},
+        "edit_request": edit_request
     }
-
     # route actions
     if action == "edit":
         state = edit_interaction(state)
