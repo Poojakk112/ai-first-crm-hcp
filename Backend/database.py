@@ -61,13 +61,13 @@ class Interaction(Base):
             "interaction_time": self.interaction_time,
             "attendees": self.attendees,
             "topics_discussed": self.topics_discussed,
-            "materials_shared": json.loads(self.materials_shared or "[]"),
-            "samples_distributed": json.loads(self.samples_distributed or "[]"),
+            "materials_shared": _safe_json(self.materials_shared, []),
+            "samples_distributed": _safe_json(self.samples_distributed, []),
             "sentiment": self.sentiment,
             "outcomes": self.outcomes,
             "follow_up_actions": self.follow_up_actions,
-            "ai_suggested_followups": json.loads(self.ai_suggested_followups or "[]"),
-            "extracted_entities": self.extracted_entities,
+            "ai_suggested_followups": _safe_json(self.ai_suggested_followups, []),
+            "extracted_entities": _safe_json(self.extracted_entities, {}),
             "ai_summary": self.ai_summary,
             "source": self.source,
             "raw_input": self.raw_input,
@@ -86,3 +86,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def _safe_json(value, fallback):
+    """Old rows may hold plain text instead of JSON - never crash on them."""
+    if not value:
+        return fallback
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return fallback if not isinstance(fallback, list) else [value]

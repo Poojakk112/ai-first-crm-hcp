@@ -55,13 +55,40 @@ class EditInteractionIn(BaseModel):
 
 
 # ---------------- HELPERS ----------------
-def _save_interaction(db: Session, structured: dict, source: str, raw_input: str = "") -> Interaction:
-    result = ai_agent.run_agent(input_text=raw_input or "", action="all")
+def _structured_to_text(s: dict) -> str:
+    """Turn the structured form into a readable note so the AI has real context."""
+    parts = [
+        f"HCP: {s.get('hcp_name', '')}",
+        f"Type: {s.get('interaction_type', '')}",
+        f"Date: {s.get('interaction_date', '')} {s.get('interaction_time', '')}".strip(),
+        f"Attendees: {s.get('attendees', '')}",
+        f"Topics discussed: {s.get('topics_discussed', '')}",
+        f"Materials shared: {', '.join(s.get('materials_shared') or [])}",
+        f"Samples distributed: {', '.join(s.get('samples_distributed') or [])}",
+        f"Observed sentiment: {s.get('sentiment', '')}",
+        f"Outcomes: {s.get('outcomes', '')}",
+        f"Follow-up actions: {s.get('follow_up_actions', '')}",
+    ]
+    return "\n".join(p for p in parts if not p.endswith(": "))
 
-    output_text = result.get("output", "")
-    followups = []
+
+def _save_interaction(db: Session, structured: dict, source: str, raw_input: str = "") -> Interaction:
+    note = raw_input or _structured_to_text(structured)
+    result = ai_agent.run_agent(input_text=note, action="all")
+
+    entities = result.get("entities") or {}
+    summary = result.get("summary", "")
+    suggestions = result.get("suggestions") or []
+
+    # In chat mode the AI fills in the structured fields from free text.
     if source == "chat":
-        followups = [output_text] if output_text else []
+        structured["hcp_name"] = entities.get("hcp_name") or structured.get("hcp_name", "")
+        structured["interaction_type"] = entities.get("interaction_type") or structured.get("interaction_type", "Meeting")
+        if entities.get("sentiment") in ("Positive", "Neutral", "Negative"):
+            structured["sentiment"] = entities["sentiment"]
+        structured["topics_discussed"] = entities.get("topics") or raw_input
+        structured["materials_shared"] = entities.get("materials_shared") or []
+        structured["samples_distributed"] = entities.get("samples_distributed") or []
 
     record = Interaction(
         hcp_name=structured.get("hcp_name", ""),
@@ -75,11 +102,11 @@ def _save_interaction(db: Session, structured: dict, source: str, raw_input: str
         sentiment=structured.get("sentiment", ""),
         outcomes=structured.get("outcomes", ""),
         follow_up_actions=structured.get("follow_up_actions", ""),
-        ai_suggested_followups=json.dumps(followups),
-        extracted_entities="",
-        ai_summary=output_text if source == "form" else "",
+        ai_suggested_followups=json.dumps(suggestions),
+        extracted_entities=json.dumps(entities),
+        ai_summary=summary,
         source=source,
-        raw_input=raw_input,
+        raw_input=raw_input or note,
     )
     db.add(record)
     db.commit()
@@ -166,11 +193,13 @@ def log_via_chat(data: ChatInteractionIn, db: Session = Depends(get_db)):
         "samples_distributed": [],
     }
     record = _save_interaction(db, structured, source="chat", raw_input=data.message)
+    item = record.to_dict()
 
-    return {
-        "interaction": record.to_dict(),
-        "reply": record.ai_summary or "Logged your interaction.",
-    }
+    reply = item["ai_summary"] or "Logged your interaction."
+    if item["ai_suggested_followups"]:
+        reply += "\n\nSuggested next steps:\n" + "\n".join(f"• {s}" for s in item["ai_suggested_followups"])
+
+    return {"interaction": item, "reply": reply}
 
 
 # ---------------- ROUTES: INDIVIDUAL AGENT TOOLS ----------------
@@ -180,6 +209,9 @@ def run_agent_tool(data: AgentActionIn):
     result = ai_agent.run_agent(input_text=data.input, action=data.action)
     return {
         "output": result.get("output", ""),
+        "entities": result.get("entities", {}),
+        "summary": result.get("summary", ""),
+        "suggestions": result.get("suggestions", []),
         "history": result.get("history", []),
     }
 
