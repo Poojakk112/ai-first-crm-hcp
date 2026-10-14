@@ -128,12 +128,15 @@ function LogInteractionScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Could not save");
+      }
       dispatch(resetForm());
       await loadInteractions();
       toast("Interaction logged and enriched by AI ✨");
     } catch (err) {
-      toast("Could not save, is the backend running?", "error");
+      toast(err.message === "Failed to fetch" ? "Could not save, is the backend running?" : err.message, "error");
     }
     dispatch(setLoading(false));
   };
@@ -152,6 +155,7 @@ function LogInteractionScreen() {
         body: JSON.stringify({ message }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "AI service error");
       const it = data.interaction || {};
       dispatch(
         addChatMessage({
@@ -165,7 +169,10 @@ function LogInteractionScreen() {
       await loadInteractions();
       toast("Logged from chat ✨");
     } catch (err) {
-      dispatch(addChatMessage({ from: "ai", text: "⚠️ I couldn't reach the backend. Is it running on port 8000?" }));
+      const msg = err.message && err.message !== "Failed to fetch"
+        ? `⚠️ ${err.message}`
+        : "⚠️ I couldn't reach the backend. Is it running on port 8000?";
+      dispatch(addChatMessage({ from: "ai", text: msg }));
     }
     setChatBusy(false);
   };
@@ -210,9 +217,10 @@ function LogInteractionScreen() {
         body: JSON.stringify({ input: toolInput, action }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       dispatch(setToolOutput(JSON.stringify({ action, ...data })));
     } catch (err) {
-      dispatch(setToolOutput(JSON.stringify({ action, error: true })));
+      dispatch(setToolOutput(JSON.stringify({ action, error: err.message || true })));
     }
     setToolBusy("");
   };
@@ -618,7 +626,13 @@ function TagInput({ items, onChange, placeholder }) {
 }
 
 function ToolResult({ result }) {
-  if (result.error) return <div className="result error">⚠️ Backend error. Is the server running?</div>;
+  if (result.error) {
+    return (
+      <div className="result error">
+        ⚠️ {typeof result.error === "string" && result.error !== "Failed to fetch" ? result.error : "Backend error. Is the server running?"}
+      </div>
+    );
+  }
   if (result.action === "extract" && result.entities && Object.keys(result.entities).length) {
     return (
       <div className="result">
