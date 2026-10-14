@@ -10,12 +10,28 @@ Behind both, a LangGraph-based AI agent (using Groq LLMs) enriches every interac
 
 ---
 
+## 📸 Screenshots
+
+**Dashboard + AI chat:** the rep types one sentence, and the agent extracts the HCP, type and sentiment, writes a summary and suggests next steps.
+
+![Dashboard and AI chat](screenshots/dashboard-ai-chat.jpg)
+
+| Structured form | AI Tools: Extract Entities |
+|---|---|
+| ![Log interaction form](screenshots/log-interaction-form.jpg) | ![Extract entities tool](screenshots/ai-tools-extract.jpg) |
+
+**Interaction timeline:** AI summaries, product/condition tags, suggested next steps, search, sentiment filters, *Edit with AI* and delete.
+
+![Interaction timeline](screenshots/interaction-timeline.jpg)
+
+---
+
 ## ⚙️ Tech Stack
 
 **Frontend:** React + Redux Toolkit (Create React App)
 **Backend:** FastAPI (Python)
 **AI Agent Framework:** LangGraph
-**LLM:** Groq — `llama-3.3-70b-versatile` (see `Backend/ai_agent.py` to switch models, e.g. to `gemma2-9b-it`)
+**LLM:** Groq. The backend automatically picks an available chat model for your API key (e.g. `openai/gpt-oss-120b`), so it keeps working when Groq retires models. You can force a specific one with `GROQ_MODEL=` in `Backend/.env`.
 **Database:** SQLite by default (`crm.db`); SQLAlchemy also supports Postgres/MySQL by changing the connection string in `database.py`
 **Font:** Google Inter
 
@@ -45,16 +61,23 @@ Log Interaction → Extract Entities → Summarize → Suggest Next Action → E
 
 ## 🖥️ Features
 
-### 1. Log HCP Interaction Screen
-- Structured form: HCP Name, Interaction Type, Date/Time, Attendees, Topics Discussed, Materials Shared, Samples Distributed, Sentiment (Positive/Neutral/Negative), Outcomes, Follow-up Actions
-- AI Assistant chat panel: log the same interaction just by describing it in plain text
-- A "LangGraph Tools" panel to run Extract Entities / Summarize / Suggest Next Action / Edit Interaction individually, for testing and demo purposes
+### 1. Dashboard
+- Live stats: total interactions, % positive sentiment, interactions this week, AI follow-ups suggested
+- Sentiment mix bar (Positive / Neutral / Negative)
+- Backend status indicator ("AI backend online")
 
-### 2. Edit Interaction
-- Given an interaction ID and a plain-language request, the AI updates only the relevant field(s) on that saved record (e.g. sentiment, outcomes) — verified end-to-end against the real database.
+### 2. Log HCP Interaction
+- **Structured form:** HCP name, interaction type (Meeting / Call / Email / Conference), date & time, attendees, topics, materials and samples as removable tags, sentiment, outcomes and follow-ups. The full form is sent to the AI for a real summary.
+- **AI Assistant chat:** describe the visit in plain English. The agent fills in the HCP name, interaction type, sentiment, products and materials automatically and replies with a summary plus 3 next steps.
 
-### 3. Saved Interactions List
-- All interactions (from form or chat) are stored in the database and shown live on the screen, including any AI-generated summary.
+### 3. AI Tools Playground
+- Run **Extract Entities**, **Summarize** or **Next Actions** on any text. Results are shown as clean cards, not raw JSON.
+
+### 4. Interaction Timeline
+- Each record shows an AI summary, product/condition/material/sample tags and suggested next steps
+- Search by HCP or topic and filter by sentiment
+- **Edit with AI:** type *"change sentiment to neutral"* and the record updates
+- Delete with confirmation, plus toast notifications for every action
 
 ---
 
