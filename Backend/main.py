@@ -1,8 +1,9 @@
 import json
 from typing import List, Optional
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -24,6 +25,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------- ERRORS ----------------
+@app.exception_handler(Exception)
+async def ai_error_handler(request: Request, exc: Exception):
+    """Return a readable error to the UI instead of a bare 500 (e.g. Groq key/model problems)."""
+    print(f"[error] {request.method} {request.url.path}: {exc}")
+    return JSONResponse(status_code=502, content={"error": f"AI service error: {str(exc)[:300]}"})
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "model": ai_agent.MODEL_NAME}
 
 
 # ---------------- SCHEMAS ----------------

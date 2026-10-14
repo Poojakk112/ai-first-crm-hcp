@@ -9,9 +9,45 @@ from langgraph.graph import StateGraph, END
 load_dotenv()
 
 # ---------------- LLM ----------------
+# Groq retires models over time. Instead of hard-coding one, pick the best chat
+# model this API key can actually use (GROQ_MODEL in .env still wins if valid).
+PREFERRED_MODELS = [
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "qwen/qwen3-32b",
+    "llama-3.1-8b-instant",
+]
+NON_CHAT_HINTS = ("whisper", "tts", "guard", "embed", "compound", "orpheus", "prompt-guard")
+
+
+def _pick_model() -> str:
+    wanted = os.getenv("GROQ_MODEL", "").strip()
+    try:
+        from groq import Groq
+
+        available = [m.id for m in Groq(api_key=os.getenv("GROQ_API_KEY")).models.list().data]
+    except Exception as e:  # no network / bad key - fall back to the env or first preference
+        print(f"[ai_agent] Could not list Groq models ({e}); using default.")
+        return wanted or PREFERRED_MODELS[0]
+
+    if wanted and wanted in available:
+        return wanted
+    for m in PREFERRED_MODELS:
+        if m in available:
+            return m
+    chat_models = [m for m in available if not any(h in m.lower() for h in NON_CHAT_HINTS)]
+    return chat_models[0] if chat_models else (wanted or PREFERRED_MODELS[0])
+
+
+MODEL_NAME = _pick_model()
+print(f"[ai_agent] Using Groq model: {MODEL_NAME}")
+
 llm = ChatGroq(
     api_key=os.getenv("GROQ_API_KEY"),
-    model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+    model=MODEL_NAME,
     temperature=0.2,
 )
 
