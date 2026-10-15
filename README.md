@@ -1,5 +1,9 @@
 # 🧠 AI-First CRM – HCP Interaction Module
 
+**🚀 Live Demo:** https://ai-first-crm-hcp-sandy.vercel.app  
+**⚙️ Backend API docs:** https://ai-first-crm-backend-adqy.onrender.com/docs  
+_Backend runs on Render's free plan, so the first AI request after a quiet period can take ~50 seconds._
+
 ## 📌 Overview
 This project is an AI-first CRM tool for healthcare sales field representatives to log and manage their interactions with Healthcare Professionals (HCPs). It supports two ways of logging an interaction:
 
